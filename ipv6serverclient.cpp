@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define AppVersion "1.01"
+#define AppVersion "1.02"
 
 typedef enum SocketMode_
 {
@@ -79,6 +79,7 @@ int tcp_listen(const char *host, const char *service, const int listen_num = 5)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_IP;
 
+    // 服务器端，host可为通配地址[::]
     if (0 != (ret = getaddrinfo(host, service, &hints, &res)))
     {
         cout << "getaddrinfo error: " << gai_strerror(ret) << endl;
@@ -176,10 +177,13 @@ int get_addrinfo(const struct sockaddr *addr, string &ip, in_port_t &port)
     return 0;
 }
 
-//./IPv6ServerClientDemo SERVER ::0 9527          #server mode, listen ipv6 and ipv4
-//./IPv6ServerClientDemo SERVER 127.0.0.1 9527    #server mode, listen only on  ipv4
-//./IPv6ServerClientDemo CLIENT ::0 9527          #clinet mode, listen ipv6 and ipv4
-//./IPv6ServerClientDemo CLIENT 127.0.0.1 9527    #clinet mode, listen only on  ipv4
+//./IPv6ServerClientDemo SERVER IPv4 9527         #server mode, listen only on  ipv4
+//./IPv6ServerClientDemo SERVER IPv6 9527         #server mode, listen only on  ipv6
+//./IPv6ServerClientDemo SERVER [::] 9527         #server mode, listen ipv6 and ipv4
+//./IPv6ServerClientDemo SERVER ::1 9527          #server mode, listen ipv6 local address
+//./IPv6ServerClientDemo CLIENT [IPv4|IPv6] 9527  #client mode, listen ipv6 or ipv4
+//./IPv6ServerClientDemo CLIENT 127.0.0.1 9527    #client mode, listen only on ipv4 local address
+//./IPv6ServerClientDemo CLIENT ::1 9527          #client mode, listen only on ipv6 local address
 int main(int argc, char *argv[])
 {
     SocketMode_t SocketMode;
@@ -187,7 +191,7 @@ int main(int argc, char *argv[])
 
     printf("AppVersion:%s\n",AppVersion);
 
-    if (4 > argc)
+    if (3 > argc)
     {
         cout << "usage: " << argv[0] << " <mode> [<hostname/ipaddress>] <service/port>" << endl;
         return -1;
@@ -214,11 +218,17 @@ int main(int argc, char *argv[])
         char buff[128];
         struct sockaddr_storage cliaddr;
 
+        if (4 > argc)
+        {
+            cout << "usage: " << argv[0] << " <mode> [<hostname/ipaddress>] <service/port>" << endl;
+            return -3;
+        }
+
         sockfd = tcp_connect(argv[2], argv[3]);
         if (sockfd < 0)
         {
             cout << "call tcp_connect error" << endl;
-            return -1;
+            return -5;
         }
 
         bzero(buff, sizeof(buff));
@@ -237,11 +247,25 @@ int main(int argc, char *argv[])
         time_t now;
         char buff[128];
 
-        listenfd = tcp_listen(argv[2], argv[3]);
+        if (3 > argc)
+        {
+            cout << "usage: " << argv[0] << " <mode> [<hostname/ipaddress>] <service/port>" << endl;
+            return -4;
+        }
+        
+        if(3 == argc)
+        {
+            listenfd = tcp_listen("::", argv[2]);
+        }
+        else
+        {
+            listenfd = tcp_listen(argv[2], argv[3]);
+        }
+
         if (listenfd < 0)
         {
             cout << "call tcp_listen error" << endl;
-            return -2;
+            return -6;
         }
 
         while (true)
