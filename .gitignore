@@ -1,6 +1,6 @@
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
-Makefile
+./Makefile
 ./bin/
 ./bin/*.bin
